@@ -1,0 +1,12 @@
+X Search and download videos 
+X Playing the video audio
+Search for videos
+Skipping the video audio
+Keep several videos in a queue
+Show the queue
+Exception handling
+Fix aliases to the commands (!p,!h,!s)
+-Stream the video instead of downloading the full thing (also video lenght limit?)
+-Skip specific songs in the queue
+-Use video playlists
+-Repeat song funcionality
