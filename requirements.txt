@@ -1,0 +1,5 @@
+discord.py
+pynacl
+pytube
+python-dotenv
+requests
