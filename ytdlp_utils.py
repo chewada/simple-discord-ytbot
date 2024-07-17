@@ -2,13 +2,12 @@
 import os
 import yt_dlp
 
-
-def downloadAudioFile(query: str, folder: str): # Does not handle searching rn
-
+def extractDict(query: str, folder: str, download: bool):
     ydl_opts = {
         'format': 'worstaudio',
+        'source_address': '0.0.0.0',
         'outtmpl': '%(id)s.%(ext)s',
-        #'default_search': 'ytsearch',
+        'default_search': 'ytsearch',
         'paths': {'home': f'./audio_files/{folder}'},
         'noplaylist': True,
         'allow_playlist_files': False
@@ -16,33 +15,32 @@ def downloadAudioFile(query: str, folder: str): # Does not handle searching rn
 
     ydl = yt_dlp.YoutubeDL(ydl_opts)
     try: 
-         info_dict = ydl.extract_info(query, download=True)
+         info_dict = ydl.extract_info(query, download=download)
     except: 
          return None
-
+    
     return info_dict
 
-def isPlaylist(link):
-    return "&list=" in link
+def downloadAudioFile(query: str, folder: str): # Donwloads the audio from a query or link
 
+    info_dict = extractDict(query, folder, True)
 
-# def fastSearch(query: str):
-#         if "/watch?" in query:
-#              return None
-#         else:
-#             try: 
-#                 s = Search(query)
-#             except: 
-#                 return None
-            
-#             return getYouTubetoAudioFile(s.results[0])
-
-# def getYouTubetoAudioFile(yt: YouTube):
-#     audio_stream = yt.streams.filter(only_audio=True).first()
-#     audio_file = audio_stream.download(filename='audio.mp4')
-#     return audio_file
+    if(info_dict is None):
+         return None
     
+    if 'entries' in info_dict:
+        info_dict = info_dict['entries'][0]
+    
+    return info_dict
 
-# def downloadPlaylist(link):
-#     #p = Playlist(link)
-#     return f"Downloaded playlist, {p.title}"
+def getTitle(query: str):
+     
+    info_dict = extractDict(query, "temp", False)
+
+    if(info_dict is None):
+        return "None"
+    
+    if 'entries' in info_dict:
+        info_dict = info_dict['entries'][0]
+
+    return info_dict["title"]
