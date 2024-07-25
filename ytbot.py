@@ -50,13 +50,24 @@ async def leave(ctx):
     else:
         await ctx.send("Bot is not connected to any voice channel.")
 
-@bot.command(aliases=['s']) # NEEDS FIXING FOR THE QUEUE
+@bot.command(aliases=['s'])
 async def skip(ctx):
     voice_client = ctx.guild.voice_client
     
     voice_client.stop()
     reset_timer()
 
+@bot.command(aliases=['q'])
+async def queue(ctx):
+    server_id = ctx.guild.id
+    current_queue = "Songs currently in the queue:"
+    i = 1
+    for song_info in server_queues[server_id]:
+        info_dict = song_info[1]
+        current_queue += f'\n`{i}. {info_dict["title"]}: {datetime.timedelta(seconds=info_dict["duration"])}`'
+        i += 1
+
+    await ctx.send(current_queue)
 
 @bot.command(aliases=['p'])
 async def play(ctx, *args):
@@ -88,18 +99,20 @@ async def play(ctx, *args):
             else:
 
                 filepath = f'./audio_files/{server_id}/{info_dict["id"]}.{info_dict["ext"]}'
-                server_queues[server_id].append(filepath)
+                server_queues[server_id].append((filepath, info_dict))
 
                 if not voice_client.is_playing() and len(server_queues[server_id]) == 1:
-                    await play_next(voice_client, server_id)
+                    source = discord.PCMVolumeTransformer(discord.FFmpegPCMAudio(executable="ffmpeg", source=filepath), volume=0.2)
+                    voice_client.play(source, after=lambda e: asyncio.run_coroutine_threadsafe(play_next(voice_client, server_id), bot.loop))
                 
     else:
         await ctx.send("You are not in a voice channel")
 
 async def play_next(voice_client, server_id):
-    filepath = server_queues[server_id].pop()
-    source = discord.PCMVolumeTransformer(discord.FFmpegPCMAudio(executable="ffmpeg", source=filepath), volume=0.2)
-    voice_client.play(source, after=lambda e: asyncio.run_coroutine_threadsafe(play_next(voice_client, server_id), bot.loop))
+    server_queues[server_id].pop(0)[0] # remove the previous song data
+    if len(server_queues[server_id]) != 0:
+        source = discord.PCMVolumeTransformer(discord.FFmpegPCMAudio(executable="ffmpeg", source=server_queues[server_id][0][0]), volume=0.2)
+        voice_client.play(source, after=lambda e: asyncio.run_coroutine_threadsafe(play_next(voice_client, server_id), bot.loop))
 
     reset_timer()
    

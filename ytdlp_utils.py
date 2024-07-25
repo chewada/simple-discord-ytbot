@@ -1,5 +1,3 @@
-
-import os
 import yt_dlp
 
 def extractDict(query: str, folder: str, download: bool):
