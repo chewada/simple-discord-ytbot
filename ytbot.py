@@ -62,7 +62,12 @@ async def queue(ctx):
     server_id = ctx.guild.id
     current_queue = "Songs currently in the queue:"
     i = 1
-    for song_info in server_queues[server_id]:
+    try:
+        queue = server_queues[server_id]
+    except KeyError:
+        await ctx.send(f'There is nothing in the queue')
+
+    for song_info in queue:
         info_dict = song_info[1]
         current_queue += f'\n`{i}. {info_dict["title"]}: {datetime.timedelta(seconds=info_dict["duration"])}`'
         i += 1
@@ -97,6 +102,7 @@ async def play(ctx, *args):
             if info_dict is None:
                 await ctx.send(f"Could not find {url}")
             else:
+                await ctx.send(f'found: `{info_dict["title"]}`')
 
                 filepath = f'./audio_files/{server_id}/{info_dict["id"]}.{info_dict["ext"]}'
                 server_queues[server_id].append((filepath, info_dict))
