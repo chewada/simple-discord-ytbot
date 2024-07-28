@@ -89,13 +89,6 @@ async def play(ctx, *args):
 
             url = ' '.join(args)
             voice_client = ctx.voice_client
-
-            if(url.startswith("https://www.youtu")):
-                title = getTitle(url)
-                await ctx.send(f'looking for `{title}`...')
-                
-            else:
-                await ctx.send(f'searching for `{url}`...')
             
             info_dict = downloadAudioFile(url, server_id)
 
