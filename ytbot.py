@@ -24,7 +24,8 @@ server_queues = {}
 @bot.event
 async def on_ready():
     print(f'Logged in as {bot.user.name}, with {PREFIX} as prefix')
-    check_inactivity.start()
+    reset_timer()
+    #check_inactivity.start()
 
 @bot.command(aliases=['h'])
 async def hello(ctx):
