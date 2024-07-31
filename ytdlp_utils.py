@@ -47,7 +47,7 @@ def getTitle(query: str):
 
     return info_dict["title"]
 
-def getPlaylist(query: str, folder: str):
+def downloadPlaylist(query: str, folder: str, random: bool):
     playlist_regex = re.compile(
         r'^(https?://)?(www\.)?(youtube\.com|youtu\.be)/.*(\?|\&)list=([a-zA-Z0-9_-]+).*'
     )
@@ -56,9 +56,9 @@ def getPlaylist(query: str, folder: str):
         'format': 'worstaudio',
         'source_address': '0.0.0.0',
         'outtmpl': '%(id)s.%(ext)s',
-        'default_search': 'ytsearch',
         'paths': {'home': f'./audio_files/{folder}'},
-        'allow_playlist_files': True
+        'ignoreerrors': True,
+        'playlist_random': random
         }
         ydl = yt_dlp.YoutubeDL(ydl_opts)
         try: 

@@ -53,11 +53,10 @@ async def leave(ctx):
 @bot.command(aliases=['s'])
 async def skip(ctx, *args):
     voice_client = ctx.guild.voice_client
-    
+
     try: skip_num = int(args[0])
     except:
         skip_num = 1
-
     server_id = ctx.guild.id
     try:
         queue = server_queues[server_id]
@@ -139,8 +138,15 @@ async def playlist(ctx, *args):
 
             voice_client = ctx.voice_client
             url = args[0]
-
-            playlist_dict = getPlaylist(url, server_id)
+            random = False
+            try:
+                random = args[1] == "random"
+                if random:
+                    await ctx.send(f"The playlist will be randomized :)")
+            except IndexError:
+                pass
+            
+            playlist_dict = downloadPlaylist(url, server_id, random)
             if playlist_dict is None:
                 await ctx.send(f"Could not find the playlist")
             else:
