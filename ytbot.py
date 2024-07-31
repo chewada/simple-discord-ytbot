@@ -51,10 +51,27 @@ async def leave(ctx):
         await ctx.send("Bot is not connected to any voice channel.")
 
 @bot.command(aliases=['s'])
-async def skip(ctx):
+async def skip(ctx, *args):
     voice_client = ctx.guild.voice_client
     
-    voice_client.stop()
+    try: skip_num = int(args[0])
+    except:
+        skip_num = 1
+
+    server_id = ctx.guild.id
+    try:
+        queue = server_queues[server_id]
+    except KeyError:
+        await ctx.send(f'There is nothing in the queue')
+
+    if skip_num > 1:
+        if skip_num <= len(queue):
+            info_dict = queue.pop(skip_num-1)[1]
+            await ctx.send(f'Skipped: `{info_dict["title"]}`')
+        else:
+            await ctx.send(f'There is no song in the queue with index: {skip_num}')
+    else:
+        voice_client.stop() # skip current song
     reset_timer()
 
 @bot.command(aliases=['q'])
@@ -79,7 +96,7 @@ async def play(ctx, *args):
 
     if ctx.author.voice: # is the chatter in a voice channel? # EXTRACT THIS TO ANOTHER CHECK FUNCTION!
         server_id = ctx.guild.id
-        if not ctx.voice_client: # is the bot in the same channel?
+        if not ctx.voice_client: # is the bot in the same channel? Otherwise join the channel
             channel = ctx.author.voice.channel
             await channel.connect()
             server_queues[server_id] = []
@@ -95,7 +112,7 @@ async def play(ctx, *args):
             if info_dict is None:
                 await ctx.send(f"Could not find {url}")
             else:
-                await ctx.send(f'found: `{info_dict["title"]}`')
+                await ctx.send(f'Found: `{info_dict["title"]}`')
 
                 filepath = f'./audio_files/{server_id}/{info_dict["id"]}.{info_dict["ext"]}'
                 server_queues[server_id].append((filepath, info_dict))
@@ -107,8 +124,42 @@ async def play(ctx, *args):
     else:
         await ctx.send("You are not in a voice channel")
 
+@bot.command(aliases=['pl'])
+async def playlist(ctx, *args):
+
+    if ctx.author.voice: 
+        server_id = ctx.guild.id
+        if not ctx.voice_client: # is the bot in the same channel? Otherwise join the channel
+            channel = ctx.author.voice.channel
+            await channel.connect()
+            server_queues[server_id] = []
+        
+        if ctx.voice_client:
+            reset_timer()
+
+            voice_client = ctx.voice_client
+            url = args[0]
+
+            playlist_dict = getPlaylist(url, server_id)
+            if playlist_dict is None:
+                await ctx.send(f"Could not find the playlist")
+            else:
+                await ctx.send(f'Found a playlist: `{playlist_dict["title"]}`')
+
+                for info_dict in playlist_dict['entries']:
+
+                    filepath = f'./audio_files/{server_id}/{info_dict["id"]}.{info_dict["ext"]}'
+                    server_queues[server_id].append((filepath, info_dict))
+
+                    if not voice_client.is_playing() and len(server_queues[server_id]) == 1:
+                        source = discord.PCMVolumeTransformer(discord.FFmpegPCMAudio(executable="ffmpeg", source=filepath), volume=0.2)
+                        voice_client.play(source, after=lambda e: asyncio.run_coroutine_threadsafe(play_next(voice_client, server_id), bot.loop))
+    else:
+        await ctx.send("You are not in a voice channel")
+
+
 async def play_next(voice_client, server_id):
-    server_queues[server_id].pop(0)[0] # remove the previous song data
+    server_queues[server_id].pop(0) # remove the previous song data
     if len(server_queues[server_id]) != 0:
         source = discord.PCMVolumeTransformer(discord.FFmpegPCMAudio(executable="ffmpeg", source=server_queues[server_id][0][0]), volume=0.2)
         voice_client.play(source, after=lambda e: asyncio.run_coroutine_threadsafe(play_next(voice_client, server_id), bot.loop))
