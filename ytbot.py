@@ -129,7 +129,7 @@ async def playlist(ctx, *args):
 
     if ctx.author.voice: 
         server_id = ctx.guild.id
-        if not ctx.voice_client: # is the bot in the same channel? Otherwise join the channel
+        if not ctx.voice_client: # is the bot in channel? Otherwise join the channel
             channel = ctx.author.voice.channel
             await channel.connect()
             server_queues[server_id] = []
@@ -143,7 +143,7 @@ async def playlist(ctx, *args):
             try:
                 random = args[1] == "random"
                 if random:
-                    await ctx.send(f"The playlist will be randomized :)")
+                    await ctx.send(f"The playlist will be randomized")
             except IndexError:
                 pass
             
@@ -151,12 +151,12 @@ async def playlist(ctx, *args):
             if playlist_dict is None:
                 await ctx.send(f"Could not find the playlist")
             else:
-                await ctx.send(f'Found a playlist: `{playlist_dict["title"]}`')
+                await ctx.send(f'Found a playlist: `{playlist_dict["title"]}` where `{len(playlist_dict)}´ songs were downloaded')
 
                 for info_dict in playlist_dict['entries']:
-
-                    filepath = f'./audio_files/{server_id}/{info_dict["id"]}.{info_dict["ext"]}'
-                    server_queues[server_id].append((filepath, info_dict))
+                    if info_dict is not None:
+                        filepath = f'./audio_files/{server_id}/{info_dict["id"]}.{info_dict["ext"]}'
+                        server_queues[server_id].append((filepath, info_dict))
 
                     if not voice_client.is_playing() and len(server_queues[server_id]) == 1:
                         source = discord.PCMVolumeTransformer(discord.FFmpegPCMAudio(executable="ffmpeg", source=filepath), volume=0.2)
@@ -181,6 +181,11 @@ def reset_timer():
 @bot.event
 async def on_voice_state_update(member: discord.User, before: discord.VoiceState, after: discord.VoiceState):
     if member != bot.user:
+        if bot.voice_clients:
+            for vc in bot.voice_clients:
+                if len(vc.channel.members) == 1 and vc.channel.members[0] == bot.user:
+                    await vc.disconnect()
+                    print("Disconnected because the bot was alone in the voice channel")
         return
     if before.channel is not None and after.channel is None: # remove the downloaded files whenever the bot leaves.
         server_id = before.channel.guild.id
@@ -197,6 +202,9 @@ async def check_inactivity():
             if not vc.is_playing() and (datetime.datetime.now() - last_activity_date).total_seconds() > (TIMEOUT_MIN * 60):
                 await vc.disconnect()
                 print("Disconnected due to inactivity")
+            if len(vc.channel.members) == 1 and vc.channel.members[0] == bot.user:
+                await vc.disconnect()
+                print("Disconnected because the bot was alone in the voice channel")
 
 def main():
     if TOKEN is None:
