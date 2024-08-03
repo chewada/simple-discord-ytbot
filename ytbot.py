@@ -115,9 +115,15 @@ async def play(ctx, *args):
                 await ctx.send(f'Found: `{info_dict["title"]}`')
 
                 filepath = f'./audio_files/{server_id}/{info_dict["id"]}.{info_dict["ext"]}'
-                server_queues[server_id].append((filepath, info_dict))
+                
+                try: server_queues[server_id].append((filepath, info_dict))
+                except KeyError: server_queues[server_id] = [(filepath, info_dict)]
 
                 if not voice_client.is_playing() and len(server_queues[server_id]) == 1:
+                    if not ctx.voice_client: # is the bot in channel? Otherwise join the channel
+                        channel = ctx.author.voice.channel
+                        await channel.connect()
+
                     source = discord.PCMVolumeTransformer(discord.FFmpegPCMAudio(executable="ffmpeg", source=filepath), volume=0.2)
                     voice_client.play(source, after=lambda e: asyncio.run_coroutine_threadsafe(play_next(voice_client, server_id), bot.loop))
                 
@@ -129,7 +135,7 @@ async def playlist(ctx, *args):
 
     if ctx.author.voice: 
         server_id = ctx.guild.id
-        if not ctx.voice_client: # is the bot in channel? Otherwise join the channel
+        if not ctx.voice_client: # is the bot in the voice channel? Otherwise join the channel
             channel = ctx.author.voice.channel
             await channel.connect()
             server_queues[server_id] = []
@@ -139,19 +145,21 @@ async def playlist(ctx, *args):
 
             voice_client = ctx.voice_client
             url = args[0]
-            random = False
+            rand = False
             try:
-                random = args[1] == "random"
-                if random:
+                rand = args[1] == "random"
+                if rand:
                     await ctx.send(f"The playlist will be randomized")
             except IndexError:
                 pass
             
-            playlist_dict = downloadPlaylist(url, server_id, random)
+            playlist_dict = downloadPlaylist(url, server_id, rand)
             if playlist_dict is None:
                 await ctx.send(f"Could not find the playlist")
             else:
-                await ctx.send(f'Found a playlist: `{playlist_dict["title"]}` where `{len(playlist_dict)}´ songs were downloaded')
+                await ctx.send(f'Found a playlist: `{playlist_dict["title"]}` where `{len(playlist_dict['entries'])}´ songs were downloaded')
+                if(rand):
+                    random.shuffle(playlist_dict['entries'])
 
                 for info_dict in playlist_dict['entries']:
                     if info_dict is not None:
@@ -159,6 +167,9 @@ async def playlist(ctx, *args):
                         server_queues[server_id].append((filepath, info_dict))
 
                     if not voice_client.is_playing() and len(server_queues[server_id]) == 1:
+                        if not ctx.voice_client: # is the bot in channel? Otherwise join the channel
+                            channel = ctx.author.voice.channel
+                            await channel.connect()
                         source = discord.PCMVolumeTransformer(discord.FFmpegPCMAudio(executable="ffmpeg", source=filepath), volume=0.2)
                         voice_client.play(source, after=lambda e: asyncio.run_coroutine_threadsafe(play_next(voice_client, server_id), bot.loop))
     else:

@@ -52,13 +52,16 @@ def downloadPlaylist(query: str, folder: str, random: bool):
         r'^(https?://)?(www\.)?(youtube\.com|youtu\.be)/.*(\?|\&)list=([a-zA-Z0-9_-]+).*'
     )
     if(re.match(playlist_regex, query) is not None):
-        ydl_opts = {
+        ydl_opts = { # Options can be found here: https://github.com/yt-dlp/yt-dlp/blob/master/yt_dlp/options.py
         'format': 'worstaudio',
         'source_address': '0.0.0.0',
         'outtmpl': '%(id)s.%(ext)s',
         'paths': {'home': f'./audio_files/{folder}'},
         'ignoreerrors': True,
-        'playlist_random': random
+        'playlist_random': random,
+        'quiet': True,
+        'no_warnings': True,
+        'progress_hooks': [finish_hook]
         }
         ydl = yt_dlp.YoutubeDL(ydl_opts)
         try: 
@@ -70,3 +73,8 @@ def downloadPlaylist(query: str, folder: str, random: bool):
         return None
     else:
         return None
+    
+def finish_hook(dict):
+    if dict['status'] == 'finished':
+        print(f"Downloaded {dict['filename']}")
+        pass
