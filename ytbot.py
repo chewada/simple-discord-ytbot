@@ -157,7 +157,8 @@ async def playlist(ctx, *args):
             if playlist_dict is None:
                 await ctx.send(f"Could not find the playlist")
             else:
-                await ctx.send(f'Found a playlist: `{playlist_dict["title"]}` where `{len(playlist_dict['entries'])}´ songs were downloaded')
+                num_songs = len(playlist_dict['entries'])
+                await ctx.send(f'Found a playlist: `{playlist_dict["title"]}` where `{num_songs}` songs were downloaded')
                 if(rand):
                     random.shuffle(playlist_dict['entries'])
 
