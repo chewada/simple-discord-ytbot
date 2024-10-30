@@ -9,9 +9,9 @@ def extractDict(query: str, download: bool):
         'default_search': 'ytsearch',
         'paths': {'home': f'./audio_files'},
         'noplaylist': True,
+        'ignoreerrors': True,
         'allow_playlist_files': False
     }
-
     ydl = yt_dlp.YoutubeDL(ydl_opts)
     try: 
          info_dict = ydl.extract_info(query, download=download)

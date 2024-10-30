@@ -93,6 +93,14 @@ async def queue(ctx):
 
     await ctx.send(current_queue)
 
+@bot.command(aliases=['ls'])
+async def list(ctx):
+    txt = ''
+    for filename in os.listdir('./audio_files'):
+        txt += 'https://www.youtube.com/watch?v=' + filename[:-4] + '\n'
+    await ctx.send(f'List of downloaded videos: \n{txt}')
+
+
 @bot.command(aliases=['p'])
 async def play(ctx, *args):
 
@@ -182,6 +190,33 @@ async def play(ctx, *args):
 #     else:
 #         await ctx.send("You are not in a voice channel")
 
+@bot.command(aliases=['ps'])
+async def playspecific(ctx, *args):
+    if ctx.author.voice: # is the chatter in a voice channel? # EXTRACT THIS TO ANOTHER CHECK FUNCTION?
+        server_id = ctx.guild.id
+        if not ctx.voice_client: # is the bot in the same channel? Otherwise join the channel
+            channel = ctx.author.voice.channel
+            await channel.connect()
+            server_queues[server_id] = []
+        
+        if ctx.voice_client:
+            reset_timer()
+
+            song_id = args[0]
+            voice_client = ctx.voice_client
+
+            filepath = f'./audio_files/{song_id}.mp4'
+
+            file = Path(filepath)
+            if not file.is_file():
+                await ctx.send(f'File: {song_id}.mp4 not found')
+
+            source = discord.PCMVolumeTransformer(discord.FFmpegPCMAudio(executable="ffmpeg", source=filepath), volume=0.2)
+            voice_client.play(source, after=lambda e: asyncio.run_coroutine_threadsafe(play_next(voice_client, server_id), bot.loop))
+
+
+    else:
+        await ctx.send("You are not in a voice channel")
 
 async def play_next(voice_client, server_id):
     server_queues[server_id].pop(0) # remove the previous song data
