@@ -8,6 +8,7 @@ import random
 import discord
 from discord.ext import commands, tasks
 from dotenv import load_dotenv
+from pathlib import Path
 
 load_dotenv()
 TOKEN = os.getenv('BOT_TOKEN')
@@ -83,6 +84,7 @@ async def queue(ctx):
         queue = server_queues[server_id]
     except KeyError:
         await ctx.send(f'There is nothing in the queue')
+        return
 
     for song_info in queue:
         info_dict = song_info[1]
@@ -94,7 +96,7 @@ async def queue(ctx):
 @bot.command(aliases=['p'])
 async def play(ctx, *args):
 
-    if ctx.author.voice: # is the chatter in a voice channel? # EXTRACT THIS TO ANOTHER CHECK FUNCTION!
+    if ctx.author.voice: # is the chatter in a voice channel? # EXTRACT THIS TO ANOTHER CHECK FUNCTION?
         server_id = ctx.guild.id
         if not ctx.voice_client: # is the bot in the same channel? Otherwise join the channel
             channel = ctx.author.voice.channel
@@ -107,14 +109,17 @@ async def play(ctx, *args):
             url = ' '.join(args)
             voice_client = ctx.voice_client
             
-            info_dict = downloadAudioFile(url, server_id)
+            info_dict = downloadAudioFile(url, False)
 
             if info_dict is None:
                 await ctx.send(f"Could not find {url}")
             else:
                 await ctx.send(f'Found: `{info_dict["title"]}`')
 
-                filepath = f'./audio_files/{server_id}/{info_dict["id"]}.{info_dict["ext"]}'
+                filepath = f'./audio_files/{info_dict["id"]}.{info_dict["ext"]}'
+                file = Path(filepath)
+                if not file.is_file():
+                    info_dict = downloadAudioFile(url, True)
                 
                 try: server_queues[server_id].append((filepath, info_dict))
                 except KeyError: server_queues[server_id] = [(filepath, info_dict)]
@@ -125,56 +130,57 @@ async def play(ctx, *args):
                         await channel.connect()
 
                     source = discord.PCMVolumeTransformer(discord.FFmpegPCMAudio(executable="ffmpeg", source=filepath), volume=0.2)
-                    voice_client.play(source, after=lambda e: asyncio.run_coroutine_threadsafe(play_next(voice_client, server_id), bot.loop))
+                    voice_client.play(source, after=lambda e: asyncio.run_coroutine_threadsafe(play_next(voice_client, server_id), bot.loop)) 
+
                 
     else:
         await ctx.send("You are not in a voice channel")
 
-@bot.command(aliases=['pl'])
-async def playlist(ctx, *args):
+#@bot.command(aliases=['pl']) #Temporarily removed for storage bloat
+# async def playlist(ctx, *args):
 
-    if ctx.author.voice: 
-        server_id = ctx.guild.id
-        if not ctx.voice_client: # is the bot in the voice channel? Otherwise join the channel
-            channel = ctx.author.voice.channel
-            await channel.connect()
-            server_queues[server_id] = []
+#     if ctx.author.voice: 
+#         server_id = ctx.guild.id
+#         if not ctx.voice_client: # is the bot in the voice channel? Otherwise join the channel
+#             channel = ctx.author.voice.channel
+#             await channel.connect()
+#             server_queues[server_id] = []
         
-        if ctx.voice_client:
-            reset_timer()
+#         if ctx.voice_client:
+#             reset_timer()
 
-            voice_client = ctx.voice_client
-            url = args[0]
-            rand = False
-            try:
-                rand = args[1] == "random"
-                if rand:
-                    await ctx.send(f"The playlist will be randomized")
-            except IndexError:
-                pass
+#             voice_client = ctx.voice_client
+#             url = args[0]
+#             rand = False
+#             try:
+#                 rand = args[1] == "random"
+#                 if rand:
+#                     await ctx.send(f"The playlist will be randomized")
+#             except IndexError:
+#                 pass
             
-            playlist_dict = downloadPlaylist(url, server_id, rand)
-            if playlist_dict is None:
-                await ctx.send(f"Could not find the playlist")
-            else:
-                num_songs = len(playlist_dict['entries'])
-                await ctx.send(f'Found a playlist: `{playlist_dict["title"]}` where `{num_songs}` songs were downloaded')
-                if(rand):
-                    random.shuffle(playlist_dict['entries'])
+#             playlist_dict = downloadPlaylist(url, server_id, rand)
+#             if playlist_dict is None:
+#                 await ctx.send(f"Could not find the playlist")
+#             else:
+#                 num_songs = len(playlist_dict['entries'])
+#                 await ctx.send(f'Found a playlist: `{playlist_dict["title"]}` where `{num_songs}` songs were downloaded')
+#                 if(rand):
+#                     random.shuffle(playlist_dict['entries'])
 
-                for info_dict in playlist_dict['entries']:
-                    if info_dict is not None:
-                        filepath = f'./audio_files/{server_id}/{info_dict["id"]}.{info_dict["ext"]}'
-                        server_queues[server_id].append((filepath, info_dict))
+#                 for info_dict in playlist_dict['entries']:
+#                     if info_dict is not None:
+#                         filepath = f'./audio_files/{server_id}/{info_dict["id"]}.{info_dict["ext"]}'
+#                         server_queues[server_id].append((filepath, info_dict))
 
-                    if not voice_client.is_playing() and len(server_queues[server_id]) == 1:
-                        if not ctx.voice_client: # is the bot in channel? Otherwise join the channel
-                            channel = ctx.author.voice.channel
-                            await channel.connect()
-                        source = discord.PCMVolumeTransformer(discord.FFmpegPCMAudio(executable="ffmpeg", source=filepath), volume=0.2)
-                        voice_client.play(source, after=lambda e: asyncio.run_coroutine_threadsafe(play_next(voice_client, server_id), bot.loop))
-    else:
-        await ctx.send("You are not in a voice channel")
+#                     if not voice_client.is_playing() and len(server_queues[server_id]) == 1:
+#                         if not ctx.voice_client: # is the bot in channel? Otherwise join the channel
+#                             channel = ctx.author.voice.channel
+#                             await channel.connect()
+#                         source = discord.PCMVolumeTransformer(discord.FFmpegPCMAudio(executable="ffmpeg", source=filepath), volume=0.2)
+#                         voice_client.play(source, after=lambda e: asyncio.run_coroutine_threadsafe(play_next(voice_client, server_id), bot.loop))
+#     else:
+#         await ctx.send("You are not in a voice channel")
 
 
 async def play_next(voice_client, server_id):
@@ -203,8 +209,8 @@ async def on_voice_state_update(member: discord.User, before: discord.VoiceState
         server_id = before.channel.guild.id
         try: server_queues.pop(server_id)
         except: pass
-        try: shutil.rmtree(f'./audio_files/{server_id}/')
-        except: pass
+        # try: shutil.rmtree(f'./audio_files/{server_id}/') 
+        # except: pass
 
 @tasks.loop(minutes=1)
 async def check_inactivity():

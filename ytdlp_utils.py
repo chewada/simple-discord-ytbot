@@ -1,13 +1,13 @@
 import yt_dlp
 import re
 
-def extractDict(query: str, folder: str, download: bool):
+def extractDict(query: str, download: bool):
     ydl_opts = {
         'format': 'worstaudio',
         'source_address': '0.0.0.0',
         'outtmpl': '%(id)s.%(ext)s',
         'default_search': 'ytsearch',
-        'paths': {'home': f'./audio_files/{folder}'},
+        'paths': {'home': f'./audio_files'},
         'noplaylist': True,
         'allow_playlist_files': False
     }
@@ -20,32 +20,20 @@ def extractDict(query: str, folder: str, download: bool):
     
     return info_dict
 
-def downloadAudioFile(query: str, folder: str): # Donwloads the audio from a query or link
+def downloadAudioFile(query: str, download: bool): # Donwloads the audio from a query or link
 
-    info_dict = extractDict(query, folder, True)
+    info_dict = extractDict(query, download)
 
     if(info_dict is None):
          return None
     
     if 'entries' in info_dict:
         i = 0
-        while(info_dict['entries'][i].get('duration', 0) > 3600):
+        while(info_dict['entries'][i].get('duration', 0) > 5400):
             i += 1
         info_dict = info_dict['entries'][i]
     
     return info_dict
-
-def getTitle(query: str):
-     
-    info_dict = extractDict(query, "temp", False)
-
-    if(info_dict is None):
-        return None
-    
-    if 'entries' in info_dict:
-        info_dict = info_dict['entries'][0]
-
-    return info_dict["title"]
 
 def downloadPlaylist(query: str, folder: str, random: bool):
     playlist_regex = re.compile(
